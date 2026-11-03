@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bubble Pop (connect on invite)</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0E0A24; }
+    body { display: grid; place-items: center; }
+    canvas { width: min(100vw, calc(100vh * 4 / 3)); aspect-ratio: 4 / 3; touch-action: none; cursor: crosshair; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="600"></canvas>
+  <script src="game.js"></script>
+  <script src="https://relay.getjoinable.com/sdk.js" data-key="pk_…" data-sync="game" data-connect="invite"></script>
+</body>
+</html>

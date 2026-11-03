@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.getjoinable/joinable",
+  "title": "Joinable",
+  "description": "Make any game joinable: pick the pattern, get the snippet, run a two-player self-test.",
+  "websiteUrl": "https://getjoinable.com",
+  "version": "0.2.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "getjoinable",
+      "version": "0.2.1",
+      "transport": { "type": "stdio" },
+      "packageArguments": [{ "type": "positional", "value": "mcp" }],
+      "environmentVariables": [
+        {
+          "name": "JOINABLE_RELAY",
+          "description": "The Joinable relay the kit and snippets come from",
+          "default": "https://relay.getjoinable.com",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

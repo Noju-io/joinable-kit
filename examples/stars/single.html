@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Star Catcher</title>
+  <link rel="icon" href="/brand/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../frame.css">
+  <style>
+    html, body { margin: 0; height: 100%; background: #0A1224; }
+    body { display: grid; place-items: center; }
+    canvas { position: fixed; inset: 0; margin: auto; width: min(100vw, calc(100dvh * 4 / 3)); height: min(100dvh, 75vw); }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="600" data-sharp></canvas>
+  <script src="../sharp.js"></script>
+  <script src="single.js"></script>
+</body>
+</html>

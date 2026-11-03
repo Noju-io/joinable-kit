@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kart Loop · a Joinable demo</title>
+  <meta name="description" content="A two-player kart race in the browser, made multiplayer with Joinable: invite, countdown, bumps, podium, rematch.">
+  <link rel="icon" href="/brand/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../frame.css">
+  <style>
+    html, body { background: #2F6B4F; }
+    @media (max-width: 560px) { body.racing .made { display: none; } } /* the lap counter needs the corner */
+    canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; touch-action: none; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <a class="made" href="https://getjoinable.com/?ref=kart-loop" target="_blank" rel="noopener"><img src="/brand/joinable-mark.svg" alt="" width="16" height="16">Made multiplayer with Joinable</a>
+  <script async src="https://relay.getjoinable.com/sdk.js" data-key="pk_…" data-connect="invite" data-game="kart-loop"></script>
+  <script src="../sharp.js"></script>
+  <script src="racer.js"></script>
+</body>
+</html>

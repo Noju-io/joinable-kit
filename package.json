@@ -1,0 +1,16 @@
+{
+  "name": "joinable-kit",
+  "private": true,
+  "description": "Joinable's agent kit, self-test, MCP server and examples. Make any game joinable: https://getjoinable.com",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test mcp/",
+    "selftest": "node bin/getjoinable.mjs test",
+    "examples": "npx -y serve -l 5173 ."
+  },
+  "dependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}
