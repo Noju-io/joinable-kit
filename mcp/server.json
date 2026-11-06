@@ -4,6 +4,7 @@
   "title": "Joinable",
   "description": "Make any game joinable: pick the pattern, get the snippet, run a two-player self-test.",
   "websiteUrl": "https://getjoinable.com",
+  "repository": { "url": "https://github.com/Noju-io/joinable-kit", "source": "github", "subfolder": "mcp" },
   "version": "0.2.1",
   "packages": [
     {
