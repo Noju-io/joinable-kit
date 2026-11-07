@@ -1,0 +1,10 @@
+html, body { background: #120E26; }
+canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; touch-action: none; display: block; }
+.bar { position: fixed; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 12px;
+  background: rgba(18, 14, 38, .9); font: 600 14px/1 'Geist', system-ui, sans-serif; color: #F4F1FF; z-index: 2; }
+.bar b { font: 780 17px/1 'Bricolage Grotesque', system-ui, sans-serif; }
+.bar #note { flex: 1; color: #B9B2D9; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar button { all: unset; cursor: pointer; padding: 8px 12px; border-radius: 10px; background: #2A2350; font-weight: 600; }
+.bar button#build { background: #FF5A5F; color: #120E26; }
+.bar button[disabled] { opacity: .45; cursor: default; }
+@media (max-width: 560px) { .bar #note { display: none; } }

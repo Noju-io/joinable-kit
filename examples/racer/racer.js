@@ -15,6 +15,24 @@ const TRACKS = {
   wide: { name: 'Wide Loop', rx: 390, ry: 250, width: 96 },
 };
 
+// Karts: each player picks one in the waiting room (JOINABLE playerOptions). They look different
+// and handle the same, so the pick is about style, not an edge. Gold unlocks with a lap time.
+const KARTS = {
+  zip: { label: 'Zip', len: 26, wid: 16, stripe: '#2EC4B6' },
+  bolt: { label: 'Bolt', len: 30, wid: 18, stripe: '#FFB400', wing: true },
+  brick: { label: 'Brick', len: 32, wid: 22, stripe: '#7B61FF' },
+  gold: { label: 'Gold', len: 30, wid: 18, stripe: '#B8860B', wing: true, body: '#FFD34D' },
+};
+const GOLD_UNDER = 20; // seconds, solo: a time under this unlocks the Gold kart on this device
+const best = () => Number(localStorageGet('kart-best')) || Infinity;
+function localStorageGet(k) {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+
 const keys = { up: false, down: false, left: false, right: false };
 const touch = { left: false, right: false };
 
@@ -24,6 +42,7 @@ const racer = {
   track: TRACKS.oval,
   laps: 2,
   car: null,
+  kart: 'zip', // my pick
   rivals: [], // JOINABLE: the other players, from remote()
   t0: 0,
   time: 0,
@@ -117,12 +136,18 @@ function go() {
     name: 'Kart Loop',
     players: { min: 2, max: 8 },
     public: true,
+    playerOptions: {
+      kart: { label: 'Kart', choices: Object.entries(KARTS).map(([id, k]) => ({ id, label: k.label, image: `/demo/racer/karts/${id}.svg` })) },
+    },
+    // Gold is for players who've earned it on this device; Joinable shows it locked to the others.
+    unlocked: (option, id) => option !== 'kart' || id !== 'gold' || best() < GOLD_UNDER,
     options: {
       track: { label: 'Track', choices: [{ id: 'oval', label: 'Oval' }, { id: 'wide', label: 'Wide Loop' }] },
       laps: { label: 'Laps', choices: [1, 2, 3], default: 2 },
     },
     start(round) {
       const slot = round.players.findIndex((p) => p.id === round.me);
+      racer.kart = round.players[slot]?.picks?.kart ?? 'zip';
       newRace({ seed: round.seed, track: round.options.track, laps: Number(round.options.laps), slot, slots: round.players.length });
       racer.online = true;
       racer.mode = 'grid'; // Joinable shows 3-2-1; we wait for go()
@@ -231,6 +256,11 @@ function update(dt) {
     if (c.lap >= racer.laps) {
       racer.mode = 'done';
       if (racer.online) window.Joinable?.finish({ time: +racer.time.toFixed(2) }); // JOINABLE
+      else if (racer.time < best()) {
+        try {
+          localStorage.setItem('kart-best', racer.time.toFixed(2));
+        } catch {}
+      }
     }
   }
   for (let i = racer.sparks.length - 1; i >= 0; i--) {
@@ -275,19 +305,30 @@ function toScreen(x, y) {
 }
 const labels = [];
 
-function drawKart(x, y, a, color, label, alpha = 1) {
+function drawKart(x, y, a, color, label, alpha = 1, kart = 'zip') {
+  const k = KARTS[kart] ?? KARTS.zip;
+  const l = k.len;
+  const w = k.wid;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   ctx.rotate(a);
   ctx.fillStyle = 'rgba(0,0,0,.3)';
-  ctx.fillRect(-14, -9, 30, 20);
-  ctx.fillStyle = color;
+  ctx.fillRect(-l / 2 + 1, -w / 2 + 1, l, w);
+  ctx.fillStyle = '#120E26'; // wheels
+  for (const [wx, wy] of [[-l / 2 + 2, -w / 2 - 3], [-l / 2 + 2, w / 2 - 2], [l / 2 - 8, -w / 2 - 3], [l / 2 - 8, w / 2 - 2]]) ctx.fillRect(wx, wy, 6, 5);
+  ctx.fillStyle = k.body ?? color;
   ctx.beginPath();
-  ctx.roundRect(-15, -10, 30, 20, 6);
+  ctx.roundRect(-l / 2, -w / 2, l, w, w / 3);
   ctx.fill();
+  ctx.fillStyle = k.body ? color : k.stripe; // a stripe in the kart's colour, or the player's on Gold
+  ctx.fillRect(-l / 2, -2, l, 4);
+  if (k.wing) {
+    ctx.fillStyle = '#120E26';
+    ctx.fillRect(-l / 2 - 2, -w / 2, 3, w);
+  }
   ctx.fillStyle = 'rgba(255,255,255,.75)';
-  ctx.fillRect(2, -6, 7, 12);
+  ctx.fillRect(l * 0.07, -w / 2 + 4, l * 0.22, w - 8);
   ctx.restore();
   if (label) labels.push({ ...toScreen(x, y), label, color, alpha }); // drawn upright, after the world
 }
@@ -349,10 +390,10 @@ function draw() {
   for (const r of racer.rivals) {
     const s = r.state;
     if (!s) continue;
-    drawKart(s.x, s.y, s.a, r.color, r.name.toUpperCase(), r.stale ? 0.25 : r.contact === 0 ? 0.5 : 1);
+    drawKart(s.x, s.y, s.a, r.color, r.name.toUpperCase(), r.stale ? 0.25 : r.contact === 0 ? 0.5 : 1, r.picks?.kart);
   }
   const c = racer.car;
-  if (c) drawKart(c.x, c.y, c.a, window.Joinable?.me?.color ?? '#FF5A5F', null);
+  if (c) drawKart(c.x, c.y, c.a, window.Joinable?.me?.color ?? '#FF5A5F', null, 1, racer.online ? racer.kart : 'zip');
   for (const s of racer.sparks) {
     ctx.fillStyle = `rgba(255, 200, 80, ${s.life / 0.3})`;
     ctx.fillRect(s.x - 2, s.y - 2, 4, 4);

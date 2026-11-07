@@ -6,7 +6,7 @@ Joinable makes any web game multiplayer. Add one script tag and your game gets i
 quick match with strangers, a waiting room, a synced countdown, live standings, results and
 rematch. Joinable's hosted relay does the networking: you run no servers.
 
-[Website](https://getjoinable.com) · [Get a free key](https://getjoinable.com/app) · [For coding agents](https://getjoinable.com/AGENTS.md) · [llms.txt](https://getjoinable.com/llms.txt)
+[Website](https://getjoinable.com) · [Get a free key](https://getjoinable.com/app?ref=github) · [For coding agents](https://getjoinable.com/AGENTS.md) · [llms.txt](https://getjoinable.com/llms.txt)
 
 ```diff
    <script src="game.js"></script>
@@ -49,7 +49,8 @@ each other, one result, rematch. Every failure says what to fix.
 | Board, card, puzzle, clicker, builder, drawing | A shared world, often with one attribute |
 | Platformer, top-down, party game | One avatar per player in a shared world |
 | Turn-based | Shared world plus turns |
-| RTS, fighting game, competitive shooter | **Not yet.** These need lockstep, rollback or a trusted server, which aren't built |
+| RTS and strategy | Lockstep (`lockstep`): only orders travel, every device runs the same simulation, and the self-test checks it stays deterministic |
+| Fighting game, competitive shooter | **Not yet.** These need rollback or a trusted server, which aren't built |
 
 ## Where it stops working
 
@@ -57,7 +58,8 @@ each other, one result, rematch. Every failure says what to fix.
   Fine for friends and casual leaderboards, not for ranked play with prizes.
 - **Twitch timing.** Other players are predicted between updates, 20 a second. Right for racing
   and party games, wrong for a 1v1 fighting game.
-- **Huge worlds.** Thousands of moving units need lockstep, which is planned, not built.
+- **Huge worlds.** Thousands of moving units need lockstep, and lockstep needs a simulation that
+  gives the same result on every device: no `Math.random()` or clock in it. The self-test checks.
 - **Native builds.** Joinable runs in a browser page.
 
 The full list, per pattern, is in [kit/AGENTS.md](kit/AGENTS.md).
@@ -77,9 +79,9 @@ requests are applied there and come back here with the next release.
 
 ## Run the examples locally
 
-Get a free key at https://getjoinable.com/app, then put it in place of `pk_…` in the example's
-`<script … data-key="pk_…">` tag. Your key works on localhost as soon as it's made, free and never
-counted.
+No key needed: on localhost the examples connect as they are, free and never counted. To put
+a game on a real site, get a free key at https://getjoinable.com/app?ref=github and put it in
+place of `pk_…`.
 
 ```bash
 npm run examples
@@ -97,5 +99,10 @@ runs the MCP server's tests.
 
 Free to build: unlimited on localhost, previews and dev sites. Paid plans to launch on your own
 domain, billed by player-hour (beta prices): https://getjoinable.com/#pricing
+
+## Found a bug?
+
+Open an issue here. For anything security-related, email hello@getjoinable.com instead; see
+[SECURITY.md](SECURITY.md).
 
 MIT licence · made by [NOJU](https://noju.io)

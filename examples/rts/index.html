@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tiny Front · a Joinable demo</title>
+  <meta name="description" content="A two-player RTS in the browser, made multiplayer with Joinable's lockstep: bases, tanks, fog of war.">
+  <link rel="icon" href="/brand/favicon.ico" sizes="32x32">
+  <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../frame.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="bar"><b>Tiny Front</b><span id="money">$0</span><button id="build">Build tank · $100</button><span id="note"></span><button id="again">New battle</button></div>
+  <a class="made" href="https://getjoinable.com/?ref=tiny-front" target="_blank" rel="noopener"><img src="/brand/joinable-mark.svg" alt="" width="16" height="16">Made multiplayer with Joinable</a>
+  <script async src="https://relay.getjoinable.com/sdk.js" data-key="pk_…" data-connect="invite" data-game="tiny-front" data-position="top-right" data-inset="12 64"></script>
+  <script src="sim.js"></script>
+  <script src="view.js"></script>
+  <script src="online.js"></script>
+</body>
+</html>
