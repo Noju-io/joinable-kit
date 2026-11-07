@@ -136,6 +136,8 @@ shorter rounds.
 
 **The address bar:** when a player goes online, Joinable adds `?join=<room>` to the page's
 address, so the address bar is the invite link. Everything else in the address stays as it was.
+If the game clears its own query after reading it (deep links, say), leave `join` in place:
+it's how a reload or a copied address gets back into the room.
 
 **Use the game's own randomness from `seed`.** Every `Math.random()` that changes the course,
 the level or the spawns must come from a seeded generator, so all players get the same game.
@@ -175,6 +177,9 @@ the game's own.
 
 **Give players a way in.** The dock's button says "Play online". If the game has a menu, add a
 button there that calls `Joinable.open()`.
+**A game with its own menus and HUD on every screen** (briefings, panels, phone controls): set
+`data-ui="off"` and put Play online in the game's own menu. `data-avoid` suits one or two corner
+bars. It can't know every button on every screen, and the dock may cover one it doesn't name.
 
 **Hiding the online button:** if the game's CSS resets buttons with `all: unset` (or sets
 `display`), the `hidden` attribute stops working: add `button[hidden] { display: none }`.
@@ -292,7 +297,8 @@ the setup queued through `JoinableQ` (see "Full rounds"). A finished example to 
   });
 });
 
-// The UI no longer applies orders itself. It sends them; they run on every device in step():
+// The UI no longer applies orders itself. It sends them; they run on every device in step().
+// From start() on (during the 3-2-1 too): orders given before the first step() go out with the first turn.
 Joinable.command({ t: 'move', ids: [12, 14], x: 340, y: 220 });
 // When the battle ends (every device sees it on the same tick):
 window.Joinable?.finish({ place: iWon ? 1 : 2 });

@@ -97,7 +97,8 @@ runs the MCP server's tests.
 
 ## Pricing
 
-Free to build: unlimited on localhost, previews and dev sites. Paid plans to launch on your own
+Free to build: unlimited hours on localhost, previews and dev sites, in rooms of up to 4 players
+(local testing included). Paid plans to launch on your own
 domain, billed by player-hour (beta prices): https://getjoinable.com/#pricing
 
 ## Found a bug?
