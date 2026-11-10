@@ -1,0 +1,12 @@
+{
+  "name": "joinable",
+  "owner": { "name": "NOJU", "url": "https://getjoinable.com" },
+  "metadata": { "description": "Joinable's plugin for Claude: make a web game multiplayer." },
+  "plugins": [
+    {
+      "name": "joinable",
+      "source": "./plugins/joinable",
+      "description": "Make a web game multiplayer: pick the pattern for the game's genre, wire Joinable's hosted rooms, and run a two-player self-test until it passes."
+    }
+  ]
+}

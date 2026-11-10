@@ -1,0 +1,11 @@
+{
+  "name": "joinable",
+  "displayName": "Joinable",
+  "version": "0.1.0",
+  "description": "Make a web game multiplayer: Claude picks the right pattern for the game's genre, wires Joinable's hosted rooms, invites, quick match, countdown, results and rematch, and runs a two-player self-test until it passes.",
+  "author": { "name": "NOJU", "url": "https://getjoinable.com" },
+  "homepage": "https://getjoinable.com",
+  "repository": "https://github.com/Noju-io/joinable-kit",
+  "license": "MIT",
+  "keywords": ["multiplayer", "web games", "game development", "online", "lobby", "matchmaking", "phaser", "three.js", "html5"]
+}

@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, webkit } from 'playwright-core';
 
-const VERSION = '0.2.2'; // the npm package's version (packages/cli/package.json)
+const VERSION = '0.2.4'; // the npm package's version (packages/cli/package.json)
 const RELAY = (process.env.JOINABLE_RELAY || 'https://relay.getjoinable.com').replace(/\/$/, '');
 
 // An anonymous usage ping to Joinable: the command, the MCP tool, pass or fail, the version and
@@ -56,13 +56,14 @@ const browser = await chromium.launch({ headless: flag('headed', false) !== true
 const errors = [];
 // The determinism doctor's eyes: what the game's step() calls that it mustn't in lockstep.
 const WATCH = () => {
-  const jd = (window.__jd = { random: 0, date: 0, perf: 0, crypto: 0, where: {} });
+  const jd = (window.__jd = { random: 0, date: 0, perf: 0, crypto: 0, math: 0, mathFns: [], where: {} });
   const wrap = (obj, name, key) => {
     const f = obj[name];
     if (typeof f !== 'function') return;
     obj[name] = function (...args) {
       if (window.__joinableStep) {
         jd[key]++;
+        if (key === 'math' && !jd.mathFns.includes(name)) jd.mathFns.push(name);
         if (!jd.where[key]) jd.where[key] = (new Error().stack || '').split('\n').slice(2).find((l) => !/sdk\.js/.test(l))?.trim() ?? '';
       }
       return f.apply(this, args);
@@ -72,6 +73,19 @@ const WATCH = () => {
   wrap(Date, 'now', 'date');
   wrap(performance, 'now', 'perf');
   if (window.crypto) wrap(window.crypto, 'getRandomValues', 'crypto');
+  // maths that Chrome and Safari may round differently in the last digit (the SDK's MATH_FNS list)
+  for (const f of ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2', 'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh', 'exp', 'expm1', 'log', 'log1p', 'log2', 'log10', 'pow', 'hypot', 'cbrt']) wrap(Math, f, 'math');
+  // Games that read Joinable.remote() in their own loop (Phaser's update(), a Godot shim) instead
+  // of passing remote(players): count those reads, but not the self-test's own.
+  window.__jr = () => { window.__jself = true; try { return window.Joinable.remote(); } finally { window.__jself = false; } };
+  window.__jpulls = 0;
+  const hook = setInterval(() => {
+    const J = window.Joinable;
+    if (!J?.remote) return;
+    clearInterval(hook);
+    const f = J.remote;
+    try { J.remote = function (...a) { if (!window.__jself) window.__jpulls++; return f.apply(this, a); }; } catch {}
+  }, 5);
 };
 let other = null; // a second engine for lockstep: WebKit (Safari's), if installed
 async function open(u, name, engine = browser) {
@@ -151,16 +165,17 @@ try {
     pass(`local() reports ${Object.keys(l1).join(', ')}`);
   }
   if (['race', 'arena'].includes(spec.profile)) {
-    if (!(await waitFor(a, () => window.Joinable.remote().some((r) => r.state), null, 6000))) {
+    if (!(await waitFor(a, () => window.__jr().some((r) => r.state), null, 6000))) {
       const fps = await a.evaluate(() => new Promise((r) => { let n = 0; const t0 = performance.now(); const f = () => (++n, performance.now() - t0 < 1000 ? requestAnimationFrame(f) : r(n)); requestAnimationFrame(f); }));
       fail("Player 1 never received player 2's state", fps < 15 && channel !== 'chrome' ? `The page ran at ${fps} frames a second in headless Chromium. Heavy 3D games need the GPU: add --channel chrome.` : 'local() must return an object while the round is on.');
     }
     const calls = await a.evaluate(() => window.Joinable._test.remoteCalls);
-    if (!calls) fail('remote(players) was never called', 'Pass remote(players) to Joinable.game, and run the game loop with requestAnimationFrame.');
-    const keys = await a.evaluate(() => Object.keys(window.Joinable.remote()[0].state));
+    const pulls = await a.evaluate(() => window.__jpulls);
+    if (!calls && !pulls) fail('remote(players) was never called, and the game never read Joinable.remote()', 'Pass remote(players) to Joinable.game (it runs before each requestAnimationFrame frame), or read Joinable.remote() in the game\'s own loop every frame.');
+    const keys = await a.evaluate(() => Object.keys(window.__jr()[0].state));
     if (!keys.includes('x') || !keys.includes('y')) warn('remote players have no x and y: smoothing and bump prediction work on x, y, z with vx, vy, vz');
     if (!keys.includes('vx')) warn('local() has no vx/vy: remote players are drawn smoothly, but bumps will use slightly old positions');
-    pass(`remote(players) is called every frame (${calls} so far) with the other player's ${keys.join(', ')}`);
+    pass(calls ? `remote(players) is called every frame (${calls} so far) with the other player's ${keys.join(', ')}` : `the game reads Joinable.remote() (${pulls} times so far), with the other player's ${keys.join(', ')}`);
   }
 
   // Finish: wait for the game to call Joinable.finish on its own.
@@ -215,6 +230,11 @@ async function doctor(a, b, spec) {
   const calls = (w) => [['random', 'Math.random()'], ['date', 'Date.now()'], ['perf', 'performance.now()'], ['crypto', 'crypto.getRandomValues()']].filter(([k]) => w?.[k]).map(([k, label]) => `${label} ${w[k]} times${w.where[k] ? ` (first at ${w.where[k].replace(/^at /, '')})` : ''}`);
   const bad = [...new Set([...calls(wa), ...calls(wb)])];
   if (bad.length) warn(`step() calls ${bad.join('; ')}. Inside the simulation use only the round's seed (a seeded generator) and the tick number, never the clock or Math.random.`);
+  const fns = [...new Set([...(wa?.mathFns ?? []), ...(wb?.mathFns ?? [])])];
+  if (fns.length) {
+    const where = wa?.where?.math || wb?.where?.math;
+    warn(`step() calls ${fns.map((f) => `Math.${f}`).join(', ')}${where ? ` (first at ${where.replace(/^at /, '')})` : ''}. Chrome and Safari may give a different last digit for these, and a battle feeds each result into the next tick: minutes in, the devices disagree (a short test often won't show it). Inside the simulation, build them from + − × ÷ and Math.sqrt (hypot(x, y) → Math.sqrt(x * x + y * y)), use lookup tables for sin and cos, or keep angles as whole numbers. The same for the ** operator.`);
+  }
   if (new Set(ra.map(([, h]) => h)).size <= 1 && ra.length > 20) warn("hash() returns the same value every tick, so it can't catch anything. Make it a fingerprint of the battle: e.g. unit ids, positions and health, and each player's money, mixed into one number.");
   if (first) {
     const engines = other ? 'Chromium and WebKit' : 'two Chromium players';
@@ -223,7 +243,7 @@ async function doctor(a, b, spec) {
       bad.length
         ? 'Fix the calls above first: each device gets different numbers from them.'
         : other
-          ? 'Nothing obviously random was called, so look at maths that browsers may compute differently (Math.sin, cos, atan2, sqrt, pow on floats): use integers or deterministic versions inside the simulation. Also: iterate in a fixed order (arrays, not Object keys of numbers or Set/Map built from network order), and apply orders only in step().'
+          ? 'Nothing obviously random was called, so look at maths that browsers may compute differently (Math.sin, cos, atan2, hypot, pow, exp, log on floats; sqrt and + − × ÷ are the same everywhere): use integers or deterministic versions inside the simulation. Also: iterate in a fixed order (arrays, not Object keys of numbers or Set/Map built from network order), and apply orders only in step().'
           : 'The same browser disagrees with itself: something in the simulation isn\'t from the seed or the orders. Check for orders applied outside step(), the clock, Math.random, and iteration over objects or Sets in insertion order that differs between players.',
     );
   }

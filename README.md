@@ -99,7 +99,7 @@ runs the MCP server's tests.
 
 Free to build: unlimited hours on localhost, previews and dev sites, in rooms of up to 4 players
 (local testing included). Paid plans to launch on your own
-domain, billed by player-hour (beta prices): https://getjoinable.com/#pricing
+domain, billed by player-hour (beta prices): https://getjoinable.com/pricing
 
 ## Found a bug?
 

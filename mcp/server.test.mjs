@@ -7,6 +7,9 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { choosePattern } from './server.mjs';
 
+// A key-shaped value, built so this file holds no key literal (tools/export-public.mjs refuses them).
+const KEY = 'pk' + '_TESTKEY';
+
 function start() {
   const child = spawn(process.execPath, [fileURLToPath(new URL('server.mjs', import.meta.url))], {
     env: { ...process.env, JOINABLE_RELAY: 'http://127.0.0.1:9' }, // unreachable: the kit falls back to the local copy
@@ -34,8 +37,17 @@ test('handshake, tools and answers', async () => {
     s.notify('notifications/initialized');
 
     const { result } = await s.call('tools/list', {});
-    assert.deepEqual(result.tools.map((t) => t.name), ['joinable_kit', 'joinable_choose_pattern', 'joinable_snippet', 'joinable_selftest', 'joinable_desyncs']);
+    assert.deepEqual(result.tools.map((t) => t.name), ['joinable_kit', 'joinable_choose_pattern', 'joinable_snippet', 'joinable_get_started', 'joinable_desyncs', 'joinable_selftest']);
     assert.ok(result.tools.every((t) => !('run' in t) && t.inputSchema.type === 'object'));
+    // The Connectors Directory needs a title and a read-only or destructive hint on every tool.
+    assert.ok(result.tools.every((t) => t.title && t.annotations?.title && t.annotations.readOnlyHint === true && t.annotations.destructiveHint === false));
+
+    const part = await s.call('tools/call', { name: 'joinable_kit', arguments: { section: 'lockstep' } });
+    assert.match(part.result.content[0].text, /^## Lockstep/);
+    assert.ok(!part.result.content[0].text.includes('## Pattern A'), 'one section only');
+    const missing = await s.call('tools/call', { name: 'joinable_kit', arguments: { section: 'nope' } });
+    assert.equal(missing.result.isError, true);
+    assert.match(missing.result.content[0].text, /Sections: .*Full rounds/);
 
     const kit = await s.call('tools/call', { name: 'joinable_kit', arguments: {} });
     assert.match(kit.result.content[0].text, /^# Making a web game multiplayer/);
@@ -43,8 +55,8 @@ test('handshake, tools and answers', async () => {
     const pick = await s.call('tools/call', { name: 'joinable_choose_pattern', arguments: { genre: 'Racing' } });
     assert.match(pick.result.content[0].text, /profile "race"/);
 
-    const snip = await s.call('tools/call', { name: 'joinable_snippet', arguments: { pattern: 'race', key: 'TEST_KEY' } });
-    assert.match(snip.result.content[0].text, /<script async src="http:\/\/127\.0\.0\.1:9\/sdk\.js" data-key="TEST_KEY" data-connect="invite">/);
+    const snip = await s.call('tools/call', { name: 'joinable_snippet', arguments: { pattern: 'race', key: KEY } });
+    assert.ok(snip.result.content[0].text.includes(`<script async src="http://127.0.0.1:9/sdk.js" data-key="${KEY}" data-connect="invite">`));
     assert.match(snip.result.content[0].text, /profile: 'race'/);
 
     const keyless = await s.call('tools/call', { name: 'joinable_snippet', arguments: { pattern: 'score' } });

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "joinable": {
+      "type": "http",
+      "url": "https://getjoinable.com/mcp"
+    },
+    "joinable-selftest": {
+      "command": "npx",
+      "args": ["-y", "getjoinable@0.2.4", "mcp"]
+    }
+  }
+}

@@ -201,7 +201,7 @@ them ignore failed requests to the Joinable relay's `/sdk.js`.
 
 | Field | Use |
 |---|---|
-| `state` | Where they are now, estimated from their last update and `vx`/`vy`, and eased (never snapped) onto each new update. **Draw them here and collide with them here** |
+| `state` | Where they are now, estimated from their last update and `vx`/`vy`, and eased (never snapped) onto each new update. **Draw them here and collide with them here**. `null` until their first update arrives: skip them until then |
 | `now` | The same object as `state` (kept for older code) |
 | `past` | Their exact reported path about 100 ms ago. For trails and replays, not for contact |
 | `contact` | 1 = full bumps; lower = softer (high ping); 0 = no contact, draw them translucent |
@@ -218,6 +218,10 @@ Bumping, in the game's own physics, on every player's device:
   makes cars that rub side by side shudder.
 - Never move the rival: its own device does that.
 - Play the hit (sparks, sound) once per contact, not every frame the cars touch.
+
+Engines with their own loop (Phaser, PixiJS, Three.js) run on `requestAnimationFrame`, so
+`remote(players)` fires before each of their frames. Reading `Joinable.remote()` in the engine's
+own update works too.
 
 `public/demo/racer/racer.js` on the relay is a complete example, async loading included (search
 for `JOINABLE`).
@@ -253,7 +257,7 @@ one fixed tick at a time. Joinable carries the orders, drives the ticks, keeps e
 step and checks every second that the simulations still agree. Assets and state never travel,
 so a heavy game is fine.
 
-**Does the game fit?** Check all five before starting. If one fails, tell the owner what
+**Does the game fit?** Check all six before starting. If one fails, tell the owner what
 would have to change; don't force it.
 1. **The simulation can run without the screen.** Game logic (units, economy, combat) is
    separate from drawing, or can be separated.
@@ -264,6 +268,12 @@ would have to change; don't force it.
 4. **Player actions can become data** ("these units: move to x, y"), applied in one place.
 5. **Iteration order is fixed**: arrays, or sorted ids. Not object keys of numbers, and not
    Sets or Maps filled in network order.
+6. **The maths gives the same answer in every browser.** `+ − × ÷`, `Math.sqrt`, `floor`,
+   `round`, `abs`, `min`, `max` and `imul` do. `Math.sin`, `cos`, `tan`, `atan2`, `hypot`, `exp`,
+   `log`, `pow` and `**` may not: Chrome and Safari can differ in the last digit, and a battle
+   feeds each result into the next tick, so minutes in the two devices disagree. Inside the
+   simulation, write `Math.hypot(x, y)` as `Math.sqrt(x * x + y * y)`, use a lookup table (or
+   whole-number angles) for sin and cos, and multiply instead of `**`. Drawing may use anything.
 
 **The script tag** is the same as for full rounds: async, with `data-connect="invite"`, and
 the setup queued through `JoinableQ` (see "Full rounds"). A finished example to read:
@@ -396,17 +406,51 @@ Joinable.finish({ place: myTeam === winner ? 1 : 2 });
   from the two slowest players' pings (400 ms with one player 500 ms away). It carries about 90
   messages a second at 8 players.
 
+### Formats: the room's size first
+
+A game that plays at several sizes (1 v 1, 2 v 2, 4 v 4, free-for-all) lists them as `formats`.
+The play-online sheet then asks for the format **before** Invite and Quick match, and the room is
+that size. Quick match only pairs players who picked the same format. Any profile can use it.
+
+```js
+Joinable.game({
+  profile: 'lockstep', players: { min: 2, max: 8 }, teams: [{ name: 'Alpha' }, { name: 'Bravo' }], bots: true,
+  formats: [
+    { id: '1v1', label: '1 v 1', size: 1 },  // team games: size = players a side
+    { id: '2v2', label: '2 v 2', size: 2 },
+    { id: '4v4', label: '4 v 4', size: 4 },
+    { id: 'ffa', label: 'Free-for-all', teams: false, players: 8 }, // no sides, up to 8
+  ],
+  start(round) {
+    // round.format: '2v2'. round.players already fits it: two a side, AI only in those seats
+  },
+});
+```
+
+- Without `teams`, a format is `{ id, label, players }`: the room's size.
+- The first format is the default. The waiting room shows the format; the host of an invite room
+  can change it there (sides, seats and AI follow). A quick-match room keeps the format it was
+  matched for.
+- More people than the format holds (an invite link shared too widely): the first to join play,
+  the rest watch.
+- From code (the game's own menu): `Joinable.format('2v2')` before `Joinable.open()`,
+  `Joinable.inviteLink()`, `copyInvite()` or `quickMatch()`. The sheet then skips that step. The room's
+  format is `Joinable.session.format`.
+- Don't also put the format in `options`: `round.format` replaces it.
+- The room's plan size still applies (see Room sizes): 4 v 4 needs a room of 8.
+
 **Then the self-test** (getjoinable **0.2.2 or later** for the lockstep checks; `npx
 getjoinable@latest test …` makes sure): `npx getjoinable test <local URL>` plays the battle on Chromium and WebKit
 (Safari's engine) with random orders from `testCommand`, compares the fingerprints tick by tick,
 and names what isn't deterministic: `Math.random()` or clock calls inside `step()` (with the
-file and line), or maths that differs between browsers. It needs WebKit once:
+file and line), and (getjoinable 0.2.3 or later) calls to maths that may differ between
+browsers (`Math.sin`, `hypot`, …, rule 6). A short test can pass while such maths still splits a long battle, so fix those too. It needs WebKit once:
 `npx playwright-core install webkit`.
 
 **Can't run `npx`?** (Some agents' permissions don't allow it.) Open the game with
 `?joinable-check` added to its URL, in two windows; play online. A panel shows the same checks:
 the round starting, ticks run, fingerprint checks passed, any `Math.random()` or clock call
-inside `step()` with where, and where the screens' look came from. **Copy report** gives the
+inside `step()` with where, any maths that may differ between browsers (rule 6), and where the screens' look came from. **Copy report** gives the
 owner text to paste back to their agent. It works for full rounds too.
 
 **By engine:**
@@ -518,7 +562,7 @@ input when `game.turn !== Joinable.me?.id`. The host assigns turns when players 
 
 ## API reference (what exists today)
 
-Lockstep: `Joinable.game({ profile: 'lockstep', tick, inputDelay, build, start, step, hash, testCommand })`, `Joinable.command(order)`, `Joinable.finish({ place })`. Teams (any profile) and AI seats (lockstep): `teams`, `bots` in `Joinable.game`, `Joinable.team(side)`, `Joinable.teams('balance' | 'shuffle')`, `Joinable.fill(on)`. Reports: MCP `joinable_desyncs`, `GET /v1/desyncs?key=`.
+Lockstep: `Joinable.game({ profile: 'lockstep', tick, inputDelay, build, start, step, hash, testCommand })`, `Joinable.command(order)`, `Joinable.finish({ place })`. Teams (any profile) and AI seats (lockstep): `teams`, `bots` in `Joinable.game`, `Joinable.team(side)`, `Joinable.teams('balance' | 'shuffle')`, `Joinable.fill(on)`. Formats (any profile): `formats` in `Joinable.game`, `Joinable.format(id)`, `round.format`, `Joinable.session.format`. Reports: MCP `joinable_desyncs`, `GET /v1/desyncs?key=`.
 
 Full rounds: `Joinable.game(def)` (with optional `playerOptions`, `unlocked(option, id)`, `me: { name, avatar }`, `theme` (see "Match the game's look"), `onResults(results, round)` and `resultsBar`), `Joinable.setMe({ name, avatar })`, `Joinable.rematch()`, `Joinable.toLobby()`, `Joinable.finish({ time | score })`, `Joinable.quit()` (leave a
 round from your pause menu), `Joinable.open()` (the play-online sheet), `Joinable.quickMatch()`,
